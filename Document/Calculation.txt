@@ -1,0 +1,17 @@
+LM2596
+Vin = 12V	input voltage
+Vout = 5V	output voltage
+Iout = 2A	ouput current
+r = 0.3		ouput current ripple ratio
+fsw = 150 kHz	switching frequency
+
+
+L = ((12 - 5) * 5) / (12 * 150000 * 0.3 * 2) = 32.4 uH
+
+D = 5/(12 * 0.9) = 0.46
+
+If = Iout(max) * (1 - D) = 3 * 0.53 = 1.59 (A)
+
+
+deltaVout = 0.005	desired output voltage ripple
+Cout(min) = (0.3 * 2)/(8 * 150000 * 0.005) = 100 uF

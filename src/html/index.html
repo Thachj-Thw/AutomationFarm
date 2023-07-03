@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống chăm sóc cây trồng tự động</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="navbar" class="close">
+        <a id="dashboard-button" class="select" href="#">
+            <i class='bx bxs-dashboard'></i>
+            <span>Dashboard</span>
+        </a>
+        <a id="setting-button" href="#">
+            <i class='bx bx-cog' ></i>
+            <span>Setting</span>
+        </a>
+    </div>
+    <div id="container">
+        <div class="dashboard-container">
+            <div id="camera" class="container-item">
+                <p class="header">Camera</p>
+                <img src="" alt="Capture" class="center">
+            </div>
+            <div id="temperature" class="container-item">
+                <p class="header">Nhiệt độ không khí</p>
+                <p class="body center"><span class="C value">0</span>oC / <span class="F value">32</span>oF</p>
+            </div>
+            <div id="humidity" class="container-item">
+                <p class="header">Độ ẩm không khí</p>
+                <p class="body center"><span class="value">0</span>%</p>
+            </div>
+            <div id="soil-moisture" class="container-item">
+                <p class="header">Độ ẩm đất</p>
+                <p class="body center"><span class="value">0</span>%</p>
+            </div>
+            <div id="pump" class="container-item">
+                <p class="header">Trạng thái máy bơm</p>
+                <p class="body center"><span class="value state-value">OFF</span></p>
+            </div>
+            <div id="flash" class="container-item">
+                <p class="header">Trạng thái đèn Flash</p>
+                <p class="body center"><span class="value state-value">OFF</span></p>
+            </div>
+        </div>
+        <div class="setting-container hidden">
+            <div class="container-item">
+                <div id="pump-control" class="header">
+                    Bơm nước
+                    <label class="toggle" for="toggle-1">
+                        <input type="checkbox" id="toggle-1">
+                        <div class="slider"></div>
+                    </label>
+                    <p class="body"><span class="value state-value">OFF</span></p>
+                </div>
+                <div id="flash-control" class="header">Đèn Flash
+                    <label class="toggle" for="toggle-2">
+                        <input type="checkbox" id="toggle-2">
+                        <div class="slider"></div>
+                    </label>
+                    <p class="body"><span class="value state-value">OFF</span></p>
+                </div>
+            </div>
+            <h1>Setup</h1>
+            <div class="container-item">
+                <div id="value-off-setting" class="header">
+                    <div>Độ ẩm đất tối đa ( <span class="value">100%</span>)</div>
+                    <input id="value-pump-off" type="number" min="0" max="100" class="number-input">
+                    <span>%</span>
+                </div>
+                <div id="time-on-setting" class="header">
+                    <div>Thời gian bật bơm</div>
+                        <div class="time-container">
+                            <span id="time-value-1" class="value-time">chưa đặt</span>
+                            <input id="time-1" type="time" class="time-input">
+                            <button class="clear-btn" onclick="document.querySelector('#time-1').value = ''">Xoá</button>
+                        </div>
+                        <div class="time-container">
+                            <span id="time-value-2" class="value-time">chưa đặt</span>
+                            <input id="time-2" type="time" class="time-input">
+                            <button class="clear-btn" onclick="document.querySelector('#time-2').value = ''">Xoá</button>
+                        </div>
+                        <div class="time-container">
+                            <span id="time-value-3" class="value-time">chưa đặt</span>
+                            <input id="time-3" type="time" class="time-input">
+                            <button class="clear-btn" onclick="document.querySelector('#time-3').value = ''">Xoá</button>
+                        </div>
+                        <div class="time-container">
+                            <span id="time-value-4" class="value-time">chưa đặt</span>
+                            <input id="time-4" type="time" class="time-input">
+                            <button class="clear-btn" onclick="document.querySelector('#time-4').value = ''">Xoá</button>
+                        </div>
+                        <div class="time-container">
+                            <span id="time-value-5" class="value-time">chưa đặt</span>
+                            <input id="time-5" type="time" class="time-input">
+                            <button class="clear-btn" onclick="document.querySelector('#time-5').value = ''">Xoá</button>
+                        </div>
+                </div>
+            </div>
+            <button id="submit" class="center">Save</button>
+        </div>
+    </div>
+    <script src="scripts/navbar.js"></script>
+    <script src="scripts/index.js"></script>
+</body>
+</html>
