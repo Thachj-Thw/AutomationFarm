@@ -25,6 +25,8 @@ struct DataSerial_t {
   void (*sendPumpOff)(void);
 
   bool (*isGotDataSerial)(void);
+
+  void (*sendTimeSet)(int, int, int, int, int, int);
 };
 
 extern struct DataSerial_t DataSerial;

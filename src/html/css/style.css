@@ -332,11 +332,9 @@ h1 {
 }
 
 .value-time {
-    /* display: inline-block; */
     min-width: 74px;
     color: #3e306b;
     margin-right: 5px;
-    padding-top: px;
 }
 
 #value-off-setting .value{
@@ -359,8 +357,33 @@ h1 {
     justify-content: center;
 }
 
-.time-input{
+.time-input {
     margin: 0px;
     padding: 0px;
     height: 30px;
+}
+
+.set-time {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-items: center;
+}
+
+.set-time * {
+    margin-right: 3px;
+}
+
+.set-time > button {
+    border: none;
+    border-radius: 5px;
+    background-color: #024235;
+    color: white;
+    padding: 5px;
+}
+
+.set-time > span {
+    font-weight: bold;
+    text-align: center;
 }

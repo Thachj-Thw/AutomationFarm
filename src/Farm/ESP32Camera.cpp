@@ -100,6 +100,8 @@ void ESP32Camera::begin(framesize_t frame_size) {
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
     Serial.printf("Camera init failed with error 0x%x", err);
+    Serial.println();
+    return;
     ESP.restart();
   }
   sensor_t* s = esp_camera_sensor_get();

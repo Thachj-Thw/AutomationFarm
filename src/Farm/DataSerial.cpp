@@ -1,7 +1,6 @@
 #include "DataSerial.h"
 #include <HardwareSerial.h>
 #include <ArduinoJson.h>
-#include "TimeNTP.h"
 #include "HandleWifi.h"
 #include "Config.h"
 
@@ -18,13 +17,9 @@ typedef enum {
 static StaticJsonDocument<255> dataSerialDoc;
 static HardwareSerial dataSerial(2);
 static DataStruct *data_struct;
-static bool begined = false;
-static unsigned long delta, mms;
-
+static bool ready = false;
 
 static void sendControl() {
-  if (!begined)
-    return;
   dataSerialDoc.clear();
   dataSerialDoc["cmd"] = CONTROL;
   dataSerialDoc["limit"] = data_struct->limit;
@@ -34,27 +29,24 @@ static void sendControl() {
   serializeJson(dataSerialDoc, dataSerial);
 }
 
-static void sendCurrentTime() {
-  if (!begined)
-    return;
-  mms = TimeNTP.getCurrentMillis();
+static void sendTimeSet(int year, int month, int day, int hour, int minute, int second) {
   dataSerialDoc.clear();
   dataSerialDoc["cmd"] = SET_TIME;
-  dataSerialDoc["value"] = mms;
+  dataSerialDoc["year"] = year;
+  dataSerialDoc["month"] = month;
+  dataSerialDoc["hour"] = hour;
+  dataSerialDoc["minute"] = minute;
+  dataSerialDoc["second"] = second;
   serializeJson(dataSerialDoc, dataSerial);
 }
 
 static void sendPumpOn() {
-  if (!begined)
-    return;
   dataSerialDoc.clear();
   dataSerialDoc["cmd"] = PUMP_ON;
   serializeJson(dataSerialDoc, dataSerial);
 }
 
 static void sendPumpOff() {
-  if (!begined)
-    return;
   dataSerialDoc.clear();
   dataSerialDoc["cmd"] = PUMP_OFF;
   serializeJson(dataSerialDoc, dataSerial);
@@ -75,25 +67,20 @@ static bool isGotDataSerial() {
 }
 
 static void sendReady() {
-  mms = TimeNTP.getCurrentMillis();
   dataSerialDoc.clear();
   dataSerialDoc["cmd"] = READY;
-  dataSerialDoc["time"] = mms;
+  dataSerialDoc["resp"] = true;
   serializeJson(dataSerialDoc, dataSerial);
 }
 
-static void begin(DataStruct *ds) {
-  dataSerial.begin(9600, SERIAL_8N1, RX, TX);
-  data_struct = ds;
-  TimeNTP.begin();
-  delta = millis();
-  sendReady();
-  begined = true;
+static void sendReadyWithoutResponse() {
+  dataSerialDoc.clear();
+  dataSerialDoc["cmd"] = READY;
+  dataSerialDoc["resp"] = false;
+  serializeJson(dataSerialDoc, dataSerial);
 }
 
 static void handle() {
-  if (!begined)
-    return;
   if (isGotDataSerial()) {
     Cmd cmd = dataSerialDoc["cmd"];
     switch (cmd) {
@@ -108,6 +95,9 @@ static void handle() {
         int i;
         for (i = 0; i < 5; ++i)
           data_struct->timer[i] = dataSerialDoc["timer"][i];
+        if (ready)
+          sendReadyWithoutResponse();
+        ready = true;
         break;
       case RESET:
         HandleWifi.clear();
@@ -115,10 +105,21 @@ static void handle() {
         break;
     }
   }
-  mms += (unsigned long)(millis() - delta);
-  delta = millis();
-  if (mms >= 86400000)
-    sendCurrentTime();
+}
+
+static void begin(DataStruct *ds) {
+  dataSerial.begin(9600, SERIAL_8N1, RX, TX);
+  while (!dataSerial);
+  data_struct = ds;
+  sendReady();
+  unsigned long t = millis();
+  while (!ready) {
+    handle();
+    if ( (unsigned long)(millis() - t) > 1000 ) {
+      t = millis();
+      sendReady();
+    }
+  }
 }
 
 struct DataSerial_t DataSerial = {
@@ -128,4 +129,5 @@ struct DataSerial_t DataSerial = {
   .sendPumpOn = sendPumpOn,
   .sendPumpOff = sendPumpOff,
   .isGotDataSerial = isGotDataSerial,
+  .sendTimeSet = sendTimeSet,
 };

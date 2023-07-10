@@ -1,14 +1,17 @@
+#include <Wire.h>
 #include <DHT.h>
+#include "RTClib.h"
 #include <SoftwareSerial.h>
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 
-#define SOIL_PIN A0
-#define DHT_PIN A2
-#define RS_PIN 2
-#define RX 3
-#define TX 4
-#define PUMP 5
+#define SOIL_PIN  A0
+#define DHT_PIN   A2
+#define RS_PIN    2
+#define RX        3
+#define TX        4
+#define PUMP      5
+
 
 typedef struct {
   float limit;
@@ -19,12 +22,16 @@ DataBuffer_t dataBuffer = {
   100,
   { -1, -1, -1, -1, -1 }
 };
+
+RTC_DS1307 rtc;
 int on = -1;
-unsigned long milliseconds, delta, t;
+unsigned long t;
 StaticJsonDocument<225> doc;
 DHT dht(DHT_PIN, DHT11);
 SoftwareSerial dataSerial = SoftwareSerial(RX, TX);
 bool is_ready = false;
+int lastTime;
+unsigned int count = 0;
 enum CMD {
   DATA,
   SET_TIME,
@@ -38,23 +45,39 @@ enum CMD {
 void setup() {
   Serial.begin(115200);
   dataSerial.begin(9600);
+  while (!dataSerial);
+  if (!rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1);
+  }
+  if (!rtc.isrunning())
+    Serial.println("RTC is not running!");
   dht.begin();
   pinMode(PUMP, OUTPUT);
   pinMode(RS_PIN, INPUT);
   digitalWrite(PUMP, LOW);
   readDataFromEEPROM();
-  delta = 0;
   t = millis();
+  sendReady();
   waitESPReady();
 }
 
+int currentTime() {
+  DateTime now = rtc.now();
+  return now.hour() * 60 + now.minute();
+}
+
 void loop() {
-  updateTime();
-  sendDataEvery(3000);
-  pumpEvent();
+  if ((unsigned long)(millis() - t) > 1000) {
+    t = millis();
+    pumpEvent();
+    if (++count >= 3) {
+      sendData();
+      count = 0;
+    }
+  }
   handleEvent();
   handleInputEvent();
-  delay(200);
 }
 
 void handleInputEvent() {
@@ -73,22 +96,6 @@ void handleInputEvent() {
   }
 }
 
-void updateTime() {
-  milliseconds += (unsigned long)(millis() - delta);
-  delta = millis();
-  if (milliseconds >= 86400000) {
-    milliseconds -= 86400000;
-    getValueOn();
-  }
-}
-
-void sendDataEvery(int mil) {
-  if ((unsigned long)(millis() - t) > mil) {
-    t = millis();
-    sendData();
-  }
-}
-
 void sendData() {
   doc.clear();
   doc["cmd"] = DATA;
@@ -97,10 +104,11 @@ void sendData() {
   doc["soil"] = getSoilValue();
   doc["pump"] = (bool)digitalRead(PUMP);
   serializeJson(doc, dataSerial);
+  // serializeJson(doc, Serial);
+  // Serial.println();
 }
 
 void sendReset() {
-  Serial.println("RESET");
   doc.clear();
   doc["cmd"] = RESET;
   serializeJson(doc, dataSerial);
@@ -117,12 +125,18 @@ void sendReady() {
 }
 
 void pumpEvent() {
-  if (on >= 0 && (int)(milliseconds / 60000) >= dataBuffer.timer[on]) {
-    digitalWrite(PUMP, HIGH);
+  int c = currentTime();
+  if (on >= 0 && c >= dataBuffer.timer[on]) {
+    if (getSoilValue() < dataBuffer.limit)
+      digitalWrite(PUMP, HIGH);
     nextValueOn();
   }
   if (getSoilValue() > dataBuffer.limit)
     digitalWrite(PUMP, LOW);
+  if (c < lastTime) {
+    getValueOn();
+  }
+  lastTime = c;
 }
 
 void handleEvent() {
@@ -130,13 +144,14 @@ void handleEvent() {
   enum CMD cmd = doc["cmd"];
   switch (cmd) {
     case SET_TIME:
-      milliseconds = doc["value"];
+      rtc.adjust(DateTime(doc["year"], doc["month"], doc["day"], doc["hour"], doc["minute"], doc["second"]));
       getValueOn();
       break;
     case CONTROL:
       int i;
       for (i = 0; i < 5; i++)
         dataBuffer.timer[i] = doc["timer"][i];
+      printArray(dataBuffer.timer, 5);
       selectionSortTimer();
       getValueOn();
       dataBuffer.limit = doc["limit"];
@@ -151,11 +166,8 @@ void handleEvent() {
       sendData();
       break;
     case READY:
-      milliseconds = doc["time"];
-      getValueOn();
-      sendReady();
-      Serial.print("READY\t");
-      Serial.println(milliseconds);
+      if(doc["resp"])
+        sendReady();
       is_ready = true;
       break;
   }
@@ -201,7 +213,8 @@ void swap(int *a, int *b) {
 
 void getValueOn() {
   on = 0;
-  while (dataBuffer.timer[on] < (int)(milliseconds / 60000)) {
+  int c = currentTime();
+  while (dataBuffer.timer[on] < c) {
     nextValueOn();
     if (on < 0)
       break;

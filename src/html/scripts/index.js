@@ -55,6 +55,35 @@ const list_timer_value = [
 ];
 // Save button
 const save_btn = document.querySelector("#submit");
+// Settime
+const settime_btn = document.querySelector("#set-time");
+const settime_value = document.querySelector("#currenttime");
+
+settime_btn.onclick = () => {
+    var hour_minute = settime_value.value.split(":");
+    if (hour_minute.length < 2) {
+        alert("Chưa nhập thời gian");
+        return;
+    }
+    var dateObj = new Date();
+    var day_month_year = dateObj.toLocaleDateString().split("/");
+    request("POST", "/api/set_time", "json", (data) => {
+        if (data.status == 0){
+            alert("Đặt lại giờ thành công");
+            settime_value.value = "";
+        } else {
+            alert("Đặt lại giờ thất bại");
+        }
+    },
+    {
+        "year": parseInt(day_month_year[2]),
+        "month": parseInt(day_month_year[1]),
+        "day": parseInt(day_month_year[0]),
+        "hour": parseInt(hour_minute[0]),
+        "minute": parseInt(hour_minute[1]),
+        "second": 0
+    });
+};
 
 function set_pump_on(is_on){
     if (is_on){
@@ -164,6 +193,7 @@ const camera = document.querySelector("#camera img");
 
 function takeCapture(){
     request("GET", "/api/capture", "arraybuffer", (arrayBuffer) => {
+        camera.setAttribute("alt", "Lấy ảnh chụp thất bại. Nhấn để thử lại");
         camera.src = "/api/capture";
     });
 }
@@ -171,8 +201,8 @@ function takeCapture(){
 function stringTimeAsMinute(t){
     if (!t) { return -1 }
     var h_m = t.split(":");
-    h = parseInt(h_m[0]);
-    m = parseInt(h_m[1]);
+    var h = parseInt(h_m[0]);
+    var m = parseInt(h_m[1]);
     return h * 60 + m;
 }
 
@@ -188,7 +218,7 @@ save_btn.onclick = () => {
         lst_t.push(t.value ? t.value : "chưa đặt");
         lst_v.push(stringTimeAsMinute(t.value));
     }
-    request("POST", "api/set", "json", (data) => {
+    request("POST", "/api/set", "json", (data) => {
         if (data.status == 0){
             setup_soil_value.textContent = s + "%";
             for (let i = 0; i < 5; i++){

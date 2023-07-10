@@ -11,8 +11,7 @@
 static bool flash_on = false;
 static unsigned long t, t2, mms;
 static AsyncWebServer server(SERVER_PORT);
-// static ESP32Camera camera = ESP32Camera(CAMERA_MODEL_AI_THINKER);
-// static JpgCapture capture;
+static ESP32Camera camera = ESP32Camera(CAMERA_MODEL_AI_THINKER);
 static StaticJsonDocument<1024> jsonDocument;
 static DataStruct data_struct;
 
@@ -68,7 +67,6 @@ static bool waitForPumpOff(unsigned long timeout) {
   return false;
 }
 
-
 static void setupRouting() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginChunkedResponse("text/html", [](uint8_t *buffer, size_t maxlen, size_t index) {
@@ -87,33 +85,62 @@ static void setupRouting() {
   });
 
   server.on("/api/capture", HTTP_GET, [](AsyncWebServerRequest *request) {
-    // AsyncWebServerResponse *response = request->beginChunkedResponse("image/jpg", [](uint8_t *buffer, size_t maxlen, size_t index){
-    //   size_t len = min(maxlen, capture.len - index);
-    //   memcpy(buffer, capture.buf + index, len);
-    //   return len;
-    // });
-    // addHeader(response);
-    // request->send(response);
-    request->send(404);
+    JpgCapture capture = camera.getJPGCapture();
+    AsyncWebServerResponse *response = request->beginChunkedResponse("image/jpg", [capture](uint8_t *buffer, size_t maxlen, size_t index){
+      size_t len = min(maxlen, capture.len - index);
+      memcpy(buffer, capture.buf + index, len);
+      return len;
+    });
+    addHeader(response);
+    request->send(response);
   });
 
   server.on(
-    "/api/set", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    "/api/set", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
       jsonDocument.clear();
       AsyncResponseStream *response = request->beginResponseStream("application/json;charset=UTF-8");
       DeserializationError error = deserializeJson(jsonDocument, (char *)data, len);
-      if (error)
+      if (error) {
         addDataToResponse(response, ERROR);
+        request->send(response);
+      }
       else {
         data_struct.limit = jsonDocument["soil"];
         int i;
         for (i = 0; i < 5; ++i)
           data_struct.timer[i] = jsonDocument["timer"][i];
-        DataSerial.sendControl();
         addDataToResponse(response, SUCCESS);
+        request->send(response);
+        DataSerial.sendControl();
       }
-      request->send(response);
     });
+  
+  server.on(
+    "/api/set_time", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, 
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+      jsonDocument.clear();
+      AsyncResponseStream *response = request->beginResponseStream("application/json;charset=UTF-8");
+      DeserializationError error = deserializeJson(jsonDocument, (char *)data, len);
+      if (error) {
+        addDataToResponse(response, ERROR);
+        request->send(response);
+      }
+      else {
+        DataSerial.sendTimeSet(
+          jsonDocument["year"],
+          jsonDocument["month"],
+          jsonDocument["day"],
+          jsonDocument["hour"],
+          jsonDocument["minute"],
+          jsonDocument["second"]
+        );
+        serializeJson(jsonDocument, Serial);
+        addDataToResponse(response, SUCCESS);
+        request->send(response);
+      }
+    }
+  );
 
   server.on("/api/pump_on", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json;charset=UTF-8");
@@ -160,16 +187,15 @@ static void setupRouting() {
 }
 
 static void onWifiConnected() {
-  setupRouting();
   DataSerial.begin(&data_struct);
+  setupRouting();
 }
 
 static void begin() {
   Serial.begin(115200);
   pinMode(FLASH, OUTPUT);
   digitalWrite(FLASH, LOW);
-  // camera.begin(FRAMESIZE_VGA);
-  // capture = camera.getJPGCapture();
+  camera.begin(FRAMESIZE_VGA);
   HandleWifi.onConnect(onWifiConnected);
   HandleWifi.begin();
   t = millis();
@@ -177,10 +203,6 @@ static void begin() {
 
 static void handle() {
   DataSerial.handle();
-  // if ((unsigned long)(millis() - t) >= 10000) {
-  //   t = millis();
-  //   capture = camera.getJPGCapture();
-  // }
 }
 
 struct Main_t Main = {

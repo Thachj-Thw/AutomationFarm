@@ -23,9 +23,9 @@
     </div>
     <div id="container">
         <div class="dashboard-container">
-            <div id="camera" class="container-item">
+            <div id="camera" class="container-item" onclick="takeCapture()">
                 <p class="header">Camera</p>
-                <img src="" alt="Capture" class="center">
+                <img src="" alt="Nhấn để lấy ảnh chụp" class="center">
             </div>
             <div id="temperature" class="container-item">
                 <p class="header">Nhiệt độ không khí</p>
@@ -49,6 +49,11 @@
             </div>
         </div>
         <div class="setting-container hidden">
+            <div class="set-time">
+                <span>Cài đặt giờ</span>
+                <input type="time" id="currenttime" name="currenttime" class="time-input">
+                <button id="set-time">Đặt lại</button>
+            </div>
             <div class="container-item">
                 <div id="pump-control" class="header">
                     Bơm nước
